@@ -6,6 +6,7 @@ MAINTAINER Ken Cavagnolo <ken@kcavagnolo.com>
 
 # set env
 ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
+ENV LD_LIBRARY_PATH /usr/local/cuda/lib64/:$LD_LIBRARY_PATH
 COPY jupyter_notebook_config.py /root/.jupyter/
 COPY run_jupyter.sh /
 
@@ -14,9 +15,13 @@ RUN \
   set -ex && \
   echo 'DPkg::Post-Invoke {"/bin/rm -f /var/cache/apt/archives/*.deb || true";};' | tee /etc/apt/apt.conf.d/no-cache && \
   apt-get update --fix-missing && \
-  apt-get install -y wget bzip2 ca-certificates \
+  apt-get install -y --no-install-recommends \
+  	  build-essential libfreetype6-dev libpng12-dev libzmq3-dev \
+ 	  pkg-config python python3-dev rsync software-properties-common \
+	  unzip libgtk2.0-0 tcl-dev tk-dev \
+	  wget bzip2 ca-certificates \
   	  libglib2.0-0 libxext6 libsm6 libxrender1 \
-	  git mercurial subversion curl grep sed dpkg&& \
+	  git mercurial subversion curl grep sed dpkg && \
   echo 'export PATH=/opt/conda/bin:$PATH' > /etc/profile.d/conda.sh && \
   wget --quiet https://repo.continuum.io/archive/Anaconda3-4.2.0-Linux-x86_64.sh -O ~/anaconda.sh && \
   /bin/bash ~/anaconda.sh -b -p /opt/conda && \
@@ -36,9 +41,13 @@ RUN \
   apt-get clean && \
   apt-get autoremove -y && \
   rm -rf /var/lib/apt/lists/* && \
-  chmod +x /run_jupyter.sh
+  chmod +x /run_jupyter.sh && \
+  conda clean -tp -y && \
+  ln -s /usr/local/cuda/lib64/libcudnn.so.5 /usr/local/cuda/lib64/libcudnn.so
 
-EXPOSE 6006 8888
+EXPOSE 6006  # TensorBoard
+EXPOSE 8888  # Jupyter
+EXPOSE 4567  # Flask Server
 
 ENV PATH=/opt/conda/bin:$PATH
 

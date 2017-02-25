@@ -1,0 +1,113 @@
+# setup security group
+aws ec2 create-security-group \
+   --group-name jupyter \
+   --description 'sc for running jupyter notebook server'
+aws ec2 authorize-security-group-ingress \
+   --group-name jupyter \
+   --protocol tcp \
+   --port 22 \
+   --cidr 0.0.0.0/0
+aws ec2 authorize-security-group-ingress \
+   --group-name jupyter \
+   --protocol tcp \
+   --port 2376 \
+   --cidr 0.0.0.0/0
+aws ec2 authorize-security-group-ingress \
+   --group-name jupyter \
+   --protocol tcp \
+   --port 8888 \
+   --cidr 0.0.0.0/0
+
+# build docker instance
+docker-machine -D create --driver amazonec2 \
+--amazonec2-instance-type p2.xlarge \
+--amazonec2-region us-east-1 \
+--amazonec2-zone c \
+--amazonec2-retries 50 \
+--amazonec2-security-group jupyter \
+--amazonec2-vpc-id $AWS_VPC_ID \
+--amazonec2-access-key $AWS_ACCESS_KEY_ID \
+--amazonec2-secret-key $AWS_SECRET_ACCESS_KEY \
+awsgpu01
+
+# the create usually fails and docker doesn't load correctly
+docker-machine stop awsgpu01
+docker-machine start awsgpu01
+docker-machine regenerate-certs awsgpu01
+
+# check on instance
+docker-machine ip awsgpu01
+docker-machine inspect awsgpu01
+
+# SSH into the machine
+docker-machine ssh awsgpu01
+
+# Install official NVIDIA driver package
+sudo apt-key adv --fetch-keys http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1604/x86_64/7fa2af80.pub
+sudo sh -c 'echo "deb http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1604/x86_64 /" > /etc/apt/sources.list.d/cuda.list'
+sudo apt-get update && sudo apt-get install -y --no-install-recommends cuda-drivers
+
+# Install nvidia-docker and nvidia-docker-plugin
+wget -P /tmp https://github.com/NVIDIA/nvidia-docker/releases/download/v1.0.0-rc.3/nvidia-docker_1.0.0.rc.3-1_amd64.deb
+sudo dpkg -i /tmp/nvidia-docker*.deb && rm /tmp/nvidia-docker*.deb
+sudo nvidia-docker run --rm nvidia/cuda nvidia-smi
+
+# set env
+eval `docker-machine env awsgpu01`
+setenv NV_HOST "ssh://ubuntu@`docker-machine ip awsgpu01`:"
+ssh-add ~/.docker/machine/machines/awsgpu01/id_rsa
+
+# load local data
+docker-machine scp -r . awsgpu01:
+
+# build image
+docker build -t kcavagnolo/dsci-ml:latest -f Dockerfile.gpu .
+
+# push to repo
+docker login
+docker push kcavagnolo/dsci-ml:latest
+
+# setup notebook
+docker run \
+ -it --rm \
+ -p 8888:8888 \
+ -v /notebooks \
+ -v /home/kcavagnolo/ml_fun:/notebooks \
+ kcavagnolo/dsci-ml \
+ sh -c "jupyter notebook --ip=0.0.0.0 --no-browser --notebook-dir='/notebooks'"
+
+# clean-up
+docker stop $(docker ps -a -q)
+docker rm $(docker ps -a -q)
+
+# close and kill instance
+docker rmi $(docker images -a -q)
+docker-machine stop awsgpu01
+docker-machine rm -f awsgpu01
+
+# local
+docker-machine rm -f os-docker-test; clear
+docker-machine -D create --driver openstack \
+--openstack-flavor-name m2.xlarge \
+--openstack-image-name 'Ubuntu14.04-LTS-trusty-64bit-Server' \
+--openstack-floatingip-pool public \
+--openstack-sec-groups default \
+--openstack-domain-name default \
+--openstack-keypair-name cavagnok \
+--openstack-private-key-file '/home/kcavagnolo/.ssh/openstack.pem' \
+os-docker-test
+
+#### nvidia docker on AWS ####
+# problem is launching from osx with nvidia-docker which cannot run on osx
+https://github.com/NVIDIA/nvidia-docker/wiki/Deploy-on-Amazon-EC2
+https://github.com/NVIDIA/nvidia-docker/issues/171
+
+# works on the instance
+nvidia-docker run -it --rm -p 8888:8888 -v /home/ubuntu:/notebooks -w /notebooks -e PASSWORD='abc123' kcavagnolo/udsd
+
+# works from osx command line
+docker run --device=/dev/nvidiactl --device=/dev/nvidia-uvm --device=/dev/nvidia0 -it --rm -p 8888:8888 -v /home/ubuntu:/notebooks -w /notebooks -e PASSWORD='abc123' kcavagnolo/udsd
+
+# maybe all-in-one solution?
+sudo xhost +
+sudo nvidia-docker run --env="DISPLAY" --volume="$HOME/.Xauthority:/root/.Xauthority:rw" -env="QT_X11_NO_MITSHM=1" -v /dev/video0:/dev/video0 -v /tmp/.X11-unix:/tmp/.X11-unix:ro -it -p 8888:8888 -p 6006:6006 -v ~/sharefolder:/sharefolder gtarobotics/udacity-sdc bash
