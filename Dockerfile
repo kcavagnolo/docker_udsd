@@ -36,6 +36,8 @@ RUN \
   export PATH=/opt/conda/bin:$PATH && \
   conda install pip -y && \
   conda install -c menpo opencv3 -y && \
+  conda install -c conda-forge jupyter_contrib_nbextensions -y && \
+  jupyter contrib nbextension install --system && \
   pip install tensorflow-gpu && \
   pip install keras && \
   apt-get clean && \
