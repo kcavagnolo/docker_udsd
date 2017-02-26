@@ -37,6 +37,7 @@ RUN \
   conda install pip -y && \
   conda install -c menpo opencv3 -y && \
   conda install -c conda-forge jupyter_contrib_nbextensions -y && \
+  conda install -c conda-forge jupyter_nbextensions_configurator -y &&
   jupyter contrib nbextension install --system && \
   pip install tensorflow-gpu && \
   pip install keras && \
