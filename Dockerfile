@@ -18,7 +18,7 @@ RUN \
   apt-get install -y --no-install-recommends \
   	  build-essential libfreetype6-dev libpng12-dev libzmq3-dev \
  	  pkg-config python python3-dev rsync software-properties-common \
-	  unzip libgtk2.0-0 tcl-dev tk-dev \
+	  unzip lrzip libgtk2.0-0 tcl-dev tk-dev \
 	  wget bzip2 ca-certificates \
   	  libglib2.0-0 libxext6 libsm6 libxrender1 \
 	  git mercurial subversion curl grep sed dpkg && \
@@ -44,9 +44,10 @@ RUN \
   chmod +x /run_jupyter.sh && \
   conda clean -tp -y
 
-EXPOSE 6006  # TensorBoard
-EXPOSE 8888  # Jupyter
-EXPOSE 4567  # Flask Server
+# TensorBoard, Jupyter, Flask
+EXPOSE 6006
+EXPOSE 8888
+EXPOSE 4567
 
 ENV PATH=/opt/conda/bin:$PATH
 
