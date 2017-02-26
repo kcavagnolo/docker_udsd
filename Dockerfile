@@ -42,8 +42,7 @@ RUN \
   apt-get autoremove -y && \
   rm -rf /var/lib/apt/lists/* && \
   chmod +x /run_jupyter.sh && \
-  conda clean -tp -y && \
-  ln -s /usr/local/cuda/lib64/libcudnn.so.5 /usr/local/cuda/lib64/libcudnn.so
+  conda clean -tp -y
 
 EXPOSE 6006  # TensorBoard
 EXPOSE 8888  # Jupyter
