@@ -8,11 +8,10 @@ MAINTAINER Ken Cavagnolo <ken@kcavagnolo.com>
 ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
 ENV LD_LIBRARY_PATH /usr/local/cuda/lib64/:$LD_LIBRARY_PATH
 COPY jupyter_notebook_config.py /root/.jupyter/
-COPY run_jupyter.sh /
+COPY run.sh /
 
 # update OS
 RUN \
-  set -ex && \
   echo 'DPkg::Post-Invoke {"/bin/rm -f /var/cache/apt/archives/*.deb || true";};' | tee /etc/apt/apt.conf.d/no-cache && \
   apt-get update --fix-missing && \
   apt-get install -y --no-install-recommends \
@@ -37,23 +36,26 @@ RUN \
   conda install pip -y && \
   conda install -c menpo opencv3 -y && \
   conda install -c conda-forge jupyter_contrib_nbextensions -y && \
-  conda install -c conda-forge jupyter_nbextensions_configurator -y &&
+  conda install -c conda-forge jupyter_nbextensions_configurator -y && \
   jupyter contrib nbextension install --system && \
-  pip install tensorflow-gpu && \
-  pip install keras && \
   apt-get clean && \
   apt-get autoremove -y && \
   rm -rf /var/lib/apt/lists/* && \
-  chmod +x /run_jupyter.sh && \
-  conda clean -tp -y
+  chmod +x /run.sh && \
+  conda clean -tp -y && \
+  mkdir -p /usr/src/app
+
+# Install Python dependencies
+WORKDIR /usr/src/app
+ONBUILD COPY requirements.txt /usr/src/app/
+ONBUILD RUN pip install --no-cache-dir -r requirements.txt
 
 # TensorBoard, Jupyter, Flask
 EXPOSE 6006
 EXPOSE 8888
 EXPOSE 4567
 
+# run jupyter
 ENV PATH=/opt/conda/bin:$PATH
-
 ENTRYPOINT [ "/usr/bin/tini", "--" ]
-
-CMD ["/run_jupyter.sh"]
+CMD ["/run.sh"]

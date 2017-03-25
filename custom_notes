@@ -32,19 +32,19 @@ docker-machine -D create --driver amazonec2 \
 --amazonec2-vpc-id $AWS_VPC_ID \
 --amazonec2-access-key $AWS_ACCESS_KEY_ID \
 --amazonec2-secret-key $AWS_SECRET_ACCESS_KEY \
-awsgpu01
+awsgpusd
 
 # the create usually fails and docker doesn't load correctly
-docker-machine stop awsgpu01
-docker-machine start awsgpu01
-docker-machine regenerate-certs awsgpu01
+docker-machine stop awsgpusd
+docker-machine start awsgpusd
+docker-machine regenerate-certs awsgpusd
 
 # check on instance
-docker-machine ip awsgpu01
-docker-machine inspect awsgpu01
+docker-machine ip awsgpusd
+docker-machine inspect awsgpusd
 
 # SSH into the machine
-docker-machine ssh awsgpu01
+docker-machine ssh awsgpusd
 
 # Install official NVIDIA driver package
 sudo apt-key adv --fetch-keys http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1604/x86_64/7fa2af80.pub
@@ -60,15 +60,15 @@ sudo dpkg -i /tmp/nvidia-docker*.deb && rm /tmp/nvidia-docker*.deb
 sudo nvidia-docker run --rm nvidia/cuda nvidia-smi
 
 # set env
-eval `docker-machine env awsgpu01`
-setenv NV_HOST "ssh://ubuntu@`docker-machine ip awsgpu01`:"
-ssh-add ~/.docker/machine/machines/awsgpu01/id_rsa
+eval `docker-machine env awsgpusd`
+setenv NV_HOST "ssh://ubuntu@`docker-machine ip awsgpusd`:"
+ssh-add ~/.docker/machine/machines/awsgpusd/id_rsa
 
 # load local data
-docker-machine scp -r . awsgpu01:
+docker-machine scp -r . awsgpusd:
 
 # build image
-docker build -t kcavagnolo/docker_udsd:latest -f Dockerfile.gpu .
+docker build -t kcavagnolo/docker_udsd:latest -f Dockerfile .
 
 # push to repo
 docker login
@@ -89,8 +89,8 @@ docker rm $(docker ps -a -q)
 
 # close and kill instance
 docker rmi $(docker images -a -q)
-docker-machine stop awsgpu01
-docker-machine rm -f awsgpu01
+docker-machine stop awsgpusd
+docker-machine rm -f awsgpusd
 
 # local
 docker-machine rm -f os-docker-test; clear
