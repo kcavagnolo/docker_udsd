@@ -1,21 +1,26 @@
 # setup security group
 aws ec2 create-security-group \
-   --group-name jupyter \
+   --group-name docker-machine \
    --description 'sc for running jupyter notebook server'
 aws ec2 authorize-security-group-ingress \
-   --group-name jupyter \
+   --group-name docker-machine \
    --protocol tcp \
    --port 22 \
    --cidr 0.0.0.0/0
 aws ec2 authorize-security-group-ingress \
-   --group-name jupyter \
+   --group-name docker-machine \
    --protocol tcp \
    --port 2376 \
    --cidr 0.0.0.0/0
 aws ec2 authorize-security-group-ingress \
-   --group-name jupyter \
+   --group-name docker-machine \
    --protocol tcp \
    --port 8888 \
+   --cidr 0.0.0.0/0
+aws ec2 authorize-security-group-ingress \
+   --group-name docker-machine \
+   --protocol tcp \
+   --port 4567 \
    --cidr 0.0.0.0/0
 
 # build docker instance
@@ -28,7 +33,7 @@ docker-machine -D create --driver amazonec2 \
 --amazonec2-region us-east-1 \
 --amazonec2-zone c \
 --amazonec2-retries 50 \
---amazonec2-security-group jupyter \
+--amazonec2-security-group docker-machine \
 --amazonec2-vpc-id $AWS_VPC_ID \
 --amazonec2-access-key $AWS_ACCESS_KEY_ID \
 --amazonec2-secret-key $AWS_SECRET_ACCESS_KEY \
